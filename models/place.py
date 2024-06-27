@@ -24,3 +24,10 @@ class Place(BaseModel, Base):
 
     user = relationship("User", back_populates="places")
     cities = relationship("City", back_populates="places")
+    reviews = relationship("Review", back_populates="place", cascade="all, delete")
+
+    @property
+    def reviews(self):
+        from models import storage
+        from models.review import Review
+        return [review for review in storage.all(Review).values() if review.place_id == self.id]

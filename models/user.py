@@ -1,20 +1,15 @@
 #!/usr/bin/python3
 """
-Contains the class definition for User
+Contains the class definition for Review
 """
 
 from models.base_model import BaseModel, Base
-from sqlalchemy import Column, String
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, String, ForeignKey
 
-class User(BaseModel, Base):
-    """This class defines a user by various attributes"""
-    __tablename__ = 'users'
+class Review(BaseModel, Base):
+    """This class defines a review by various attributes"""
+    __tablename__ = 'reviews'
 
-    email = Column(String(128), nullable=False)
-    password = Column(String(128), nullable=False)
-    first_name = Column(String(128), nullable=True)
-    last_name = Column(String(128), nullable=True)
-
-    places = relationship("Place", back_populates="user", cascade="all, delete")
-    reviews = relationship("Review", back_populates="user", cascade="all, delete")
+    text = Column(String(1024), nullable=False)
+    place_id = Column(String(60), ForeignKey('places.id'), nullable=False)
+    user_id = Column(String(60), ForeignKey('users.id'), nullable=False)

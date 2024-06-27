@@ -1,131 +1,67 @@
 #!/usr/bin/python3
-"""This is the file storage class for AirBnB"""
+"""
+Contains the FileStorage class
+"""
+
 import json
-import datetime
 from models.base_model import BaseModel
 from models.user import User
+from models.place import Place
 from models.state import State
 from models.city import City
 from models.amenity import Amenity
-from models.place import Place
 from models.review import Review
+
+classes = {"Amenity": Amenity, "City": City, "Place": Place,
+           "Review": Review, "State": State, "User": User}
 
 
 class FileStorage:
-    """This class serializes instances to a JSON file and
-    deserializes JSON file to instances
-    Attributes:
-        __file_path: path to the JSON file
-        __objects: objects will be stored
-    """
+    """serializes instances to a JSON file & deserializes back to instances"""
+
     __file_path = "file.json"
     __objects = {}
 
     def all(self, cls=None):
-        """returns a dictionary
-        Return:
-            returns a dictionary of __object
-        """
-        if cls:
-            return {key: obj for (key, obj) in self.__objects.items()
-                    if isinstance(obj, type(cls))}
-        return self.__objects
+        """returns the list of objects of one type of class"""
+        if cls is None:
+            return self.__objects
+        else:
+            filtered_objects = {}
+            for key, value in self.__objects.items():
+                if isinstance(value, cls):
+                    filtered_objects[key] = value
+            return filtered_objects
 
     def new(self, obj):
-        """sets __object to given obj
-        Args:
-            obj: given object
-        """
-        if obj:
-            key = "{}.{}".format(type(obj).__name__, obj.id)
+        """sets in __objects the obj with key <obj class name>.id"""
+        if obj is not None:
+            key = obj.__class__.__name__ + "." + obj.id
             self.__objects[key] = obj
 
     def save(self):
-        """serialize the file path to JSON file path
-        """
-        my_dict = {}
-        for key, value in self.__objects.items():
-            my_dict[key] = value.to_dict()
-        with open(self.__file_path, 'w', encoding="UTF-8") as f:
-            json.dump(my_dict, f)
+        """serializes __objects to the JSON file (path: __file_path)"""
+        json_objects = {}
+        for key in self.__objects:
+            json_objects[key] = self.__objects[key].to_dict()
+        with open(self.__file_path, 'w') as f:
+            json.dump(json_objects, f)
 
     def reload(self):
-        """serialize the file path to JSON file path
-        """
+        """deserializes the JSON file to __objects"""
         try:
-            with open(self.__file_path, 'r', encoding="UTF-8") as f:
-                for key, value in (json.load(f)).items():
-                    value = eval(value["__class__"])(**value)
-                    self.__objects[key] = value
+            with open(self.__file_path, 'r') as f:
+                json_objects = json.load(f)
+            for key in json_objects:
+                cls_name = key.split('.')[0]
+                if cls_name in classes:
+                    self.__objects[key] = classes[cls_name](**json_objects[key])
         except FileNotFoundError:
             pass
 
     def delete(self, obj=None):
-        """Deletes obj if it's inside the attribute __objects
-        """
-        if obj:
-            key = "{}.{}".format(type(obj).__name__, obj.id)
-            if (key, obj) in self.__objects.items():
-                self.__objects.pop(key, None)
-        self.save()
-
-    def close(self):
-        """Deserializes the JSON file to objects"""
-        self.reload()
-
-    def classes(self):
-        """Returns a dictionary of valid classes and their references."""
-        from models.base_model import BaseModel
-        from models.user import User
-        from models.state import State
-        from models.city import City
-        from models.amenity import Amenity
-        from models.place import Place
-        from models.review import Review
-
-        classes = {"BaseModel": BaseModel,
-                   "User": User,
-                   "State": State,
-                   "City": City,
-                   "Amenity": Amenity,
-                   "Place": Place,
-                   "Review": Review}
-        return classes
-
-    def attributes(self):
-        """Returns the valid attributes and their types for classname."""
-        attributes = {
-            "BaseModel":
-                     {"id": str,
-                      "created_at": datetime.datetime,
-                      "updated_at": datetime.datetime},
-            "User":
-                     {"email": str,
-                      "password": str,
-                      "first_name": str,
-                      "last_name": str},
-            "State":
-                     {"name": str},
-            "City":
-                     {"state_id": str,
-                      "name": str},
-            "Amenity":
-                     {"name": str},
-            "Place":
-                     {"city_id": str,
-                      "user_id": str,
-                      "name": str,
-                      "description": str,
-                      "number_rooms": int,
-                      "number_bathrooms": int,
-                      "max_guest": int,
-                      "price_by_night": int,
-                      "latitude": float,
-                      "longitude": float,
-                      "amenity_ids": list},
-            "Review":
-            {"place_id": str,
-                         "user_id": str,
-                         "text": str}
-        }
-        return attributes
+        """delete obj from __objects if it’s inside"""
+        if obj is not None:
+            key = obj.__class__.__name__ + "." + obj.id
+            if key in self.__objects:
+                del self.__objects[key]

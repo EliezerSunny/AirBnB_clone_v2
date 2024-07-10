@@ -1,30 +1,43 @@
-from fabric.api import env, run, local
-from os import listdir
-from os.path import isfile, join
+#!/usr/bin/python3
+"""
+With Facric , creates a tgz archive
+from web_static content folder
+"""
 
-env.hosts = ['<IP web-01>', '<IP web-02>']
+from fabric.api import env, local, put, run
+from datetime import datetime
+from os.path import exists, isdir
+env.hosts = ['35.227.5.245', '3.236.14.41']
+
+
+def local_clean(number=0):
+    """Local Clean"""
+    fd_list = local('ls -1t versions', capture=True)
+    fd_list = fd_list.split('\n')
+    n = int(number)
+    if n in (0, 1):
+        n = 1
+    print(len(fd_list[n:]))
+    for i in fd_list[n:]:
+        local('rm versions/' + i)
+
+
+def remote_clean(number=0):
+    """Remote Clean"""
+    fd_list = run('ls -1t /data/web_static/releases')
+    fd_list = fd_list.split('\r\n')
+    print(fd_list)
+    n = int(number)
+    if n in (0, 1):
+        n = 1
+    print(len(fd_list[n:]))
+    for i in fd_list[n:]:
+        if i is 'test':
+            continue
+        run('rm -rf /data/web_static/releases/' + i)
+
 
 def do_clean(number=0):
-    """Delete out-of-date archives.
-    
-    Args:
-        number (int): The number of archives, including the most recent, to keep.
-    """
-    number = int(number)
-    if number < 1:
-        number = 1
-
-    # Local cleanup
-    archives = sorted([f for f in listdir("versions") if isfile(join("versions", f))])
-    archives_to_delete = archives[:-number]
-    with lcd("versions"):
-        for archive in archives_to_delete:
-            local("rm ./{}".format(archive))
-
-    # Remote cleanup
-    releases_path = "/data/web_static/releases"
-    run("ls -1t {}/ | grep web_static_".format(releases_path))
-    archives = run("ls -1t {}/ | grep web_static_".format(releases_path)).split()
-    archives_to_delete = archives[:-number]
-    for archive in archives_to_delete:
-        run("rm -rf {}/{}".format(releases_path, archive))
+    """Fabric script that deletes aout of dates archives"""
+    local_clean(number)
+    remote_clean(number)

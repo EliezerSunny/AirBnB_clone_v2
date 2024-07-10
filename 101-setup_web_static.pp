@@ -1,59 +1,40 @@
-# 101-setup_web_static.pp
-node default {
-  # Ensure /data directory exists
-  file { '/data':
-    ensure => directory,
-  }
+# Pupper manifet to redoo ejer 0
 
-  # Ensure /data/web_static directory exists
-  file { '/data/web_static':
-    ensure => directory,
-  }
+exec { 'update':
+  command => '/usr/bin/apt-get update',
+}
 
-  # Ensure /data/web_static/releases directory exists
-  file { '/data/web_static/releases':
-    ensure => directory,
-  }
+-> package { 'nginx':
+  ensure  => installed,
+}
 
-  # Ensure /data/web_static/shared directory exists
-  file { '/data/web_static/shared':
-    ensure => directory,
-  }
+-> file { ['/data/', '/data/web_static/', '/data/web_static/releases/', '/data/web_static/releases/test', '/data/web_static/shared' ]:
+  ensure => 'directory',
+  owner  => 'ubuntu',
+  group  => 'ubuntu',
+}
 
-  # Ensure /data/web_static/releases/test directory exists
-  file { '/data/web_static/releases/test':
-    ensure => directory,
-  }
+-> file { '/data/web_static/releases/test/index.html':
+  content => 'test page',
+  owner   => 'ubuntu',
+  group   => 'ubuntu',
+}
 
-  # Create /data/web_static/releases/test/index.html with the specified content
-  file { '/data/web_static/releases/test/index.html':
-    ensure  => file,
-    content => "<html>\n  <head>\n  </head>\n  <body>\n    Holberton School\n  </body>\n</html>\n",
-  }
+-> file { '/data/web_static/current':
+  ensure => 'link',
+  target => '/data/web_static/releases/test/',
+  force  => yes,
+  owner  => 'ubuntu',
+  group  => 'ubuntu',
+}
 
-  # Create a symbolic link /data/web_static/current pointing to /data/web_static/releases/test
-  file { '/data/web_static/current':
-    ensure => link,
-    target => '/data/web_static/releases/test',
-  }
+-> exec { 'sed':
+  command => '/usr/bin/env sed -i "/listen 80 default_server/a location \
+/hbnb_static/ { alias /data/web_static/current/;}" \
+/etc/nginx/sites-available/default',
+}
 
-  # Ensure Nginx is installed
-  package { 'nginx':
-    ensure => installed,
-  }
-
-  # Ensure Nginx service is running
-  service { 'nginx':
-    ensure     => running,
-    enable     => true,
-    hasrestart => true,
-    require    => Package['nginx'],
-  }
-
-  # Configure Nginx to serve the content
-  file { '/etc/nginx/sites-available/default':
-    ensure  => file,
-    content => template('nginx/default.erb'),
-    notify  => Service['nginx'],
-  }
+-> service { 'nginx':
+  ensure  => running,
+  require => Package['nginx'],
 }

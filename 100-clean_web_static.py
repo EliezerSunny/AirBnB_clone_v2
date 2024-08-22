@@ -1,43 +1,33 @@
 #!/usr/bin/python3
 """
-With Facric , creates a tgz archive
-from web_static content folder
+Deletes out-of-date archives
+fab -f 100-clean_web_static.py do_clean:number=2
+    -i ssh-key -u ubuntu > /dev/null 2>&1
 """
 
-from fabric.api import env, local, put, run
-from datetime import datetime
-from os.path import exists, isdir
-env.hosts = ['54.146.84.46', '52.204.62.162']
+import os
+from fabric.api import *
 
-
-def local_clean(number=0):
-    """Local Clean"""
-    fd_list = local('ls -1t versions', capture=True)
-    fd_list = fd_list.split('\n')
-    n = int(number)
-    if n in (0, 1):
-        n = 1
-    print(len(fd_list[n:]))
-    for i in fd_list[n:]:
-        local('rm versions/' + i)
-
-
-def remote_clean(number=0):
-    """Remote Clean"""
-    fd_list = run('ls -1t /data/web_static/releases')
-    fd_list = fd_list.split('\r\n')
-    print(fd_list)
-    n = int(number)
-    if n in (0, 1):
-        n = 1
-    print(len(fd_list[n:]))
-    for i in fd_list[n:]:
-        if i is 'test':
-            continue
-        run('rm -rf /data/web_static/releases/' + i)
+env.hosts = ['52.87.155.66', '54.89.109.87']
 
 
 def do_clean(number=0):
-    """Fabric script that deletes aout of dates archives"""
-    local_clean(number)
-    remote_clean(number)
+    """Delete out-of-date archives.
+    Args:
+        number (int): The number of archives to keep.
+    If number is 0 or 1, keeps only the most recent archive. If
+    number is 2, keeps the most and second-most recent archives,
+    etc.
+    """
+    number = 1 if int(number) == 0 else int(number)
+
+    archives = sorted(os.listdir("versions"))
+    [archives.pop() for i in range(number)]
+    with lcd("versions"):
+        [local("rm ./{}".format(a)) for a in archives]
+
+    with cd("/data/web_static/releases"):
+        archives = run("ls -tr").split()
+        archives = [a for a in archives if "web_static_" in a]
+        [archives.pop() for i in range(number)]
+        [run("rm -rf ./{}".format(a)) for a in archives]
